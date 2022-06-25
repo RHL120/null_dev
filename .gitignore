@@ -1,0 +1,15 @@
+.Module.symvers.cmd
+.modules.order.cmd
+.nulld.ko.cmd
+.nulld.mod.cmd
+.nulld.mod.o.cmd
+.nulld.o.cmd
+.nulld.prelink.o.cmd
+Module.symvers
+modules.order
+nulld.ko
+nulld.mod
+nulld.mod.c
+nulld.mod.o
+nulld.o
+nulld.prelink.o
