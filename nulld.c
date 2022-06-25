@@ -15,7 +15,6 @@ struct cdev zero_cdev;
 
 ssize_t null_write(struct file *filp, const char __user *buff, size_t size, loff_t *off)
 {
-	printk(KERN_ALERT "from null_write\n");
 	return size;
 }
 
@@ -23,16 +22,12 @@ ssize_t zero_read(struct file *filp, char __user *buff, size_t size, loff_t *off
 {
 	char *zero = kmalloc(size * sizeof(char), GFP_KERNEL);
 	ssize_t ret = -EFAULT;
-	printk(KERN_ALERT "from zero_read\n");
 	if (zero) {
-		printk(KERN_ALERT "allocated zero\n");
 		memset(zero, 0, size * sizeof(char));
-		printk(KERN_ALERT "memset zero\n");
 		if (!copy_to_user(buff, zero, size))
 			ret = size;
 		kfree(zero);
 	}
-	printk(KERN_ALERT "got res: %ld, %d\n", ret, -EFAULT);
 	return ret;
 }
 
@@ -79,11 +74,11 @@ int nulld_init(void)
 	}
 	printk(KERN_NOTICE "got major: %d", major);
 	if ((res = null_setup_cdev()) < 0) {
-		printk(KERN_ALERT "failed to setup null's cdev\n");
+		printk(KERN_ERR "failed to setup null's cdev\n");
 		goto null_cdev_ret;
 	}
 	if ((res = zero_setup_cdev()) < 0) {
-		printk(KERN_ALERT "failed to setup zero's cdev\n");
+		printk(KERN_ERR "failed to setup zero's cdev\n");
 		goto zero_cdev_ret;
 	}
 	printk(KERN_NOTICE "zero's and null's cdevs are allocated\n");
