@@ -23,15 +23,13 @@ ssize_t null_write(struct file *filp, const char __user *buff, size_t size, loff
 
 ssize_t zero_read(struct file *filp, char __user *buff, size_t size, loff_t *off)
 {
-	char *zero = kmalloc(size * sizeof(char), GFP_KERNEL);
-	ssize_t ret = -EFAULT;
-	if (zero) {
-		memset(zero, 0, size * sizeof(char));
-		if (!copy_to_user(buff, zero, size))
-			ret = size;
-		kfree(zero);
+	if (!access_ok(buff, sizeof(char))) {
+		return -EFAULT;
 	}
-	return ret;
+	for (int i = 0; i < size; i++) {
+		put_user('\0', buff+i);
+	}
+	return size;
 }
 
 struct file_operations null_fops = {
