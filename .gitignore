@@ -13,3 +13,4 @@ nulld.mod.c
 nulld.mod.o
 nulld.o
 nulld.prelink.o
+srp
