@@ -1,7 +1,7 @@
 #!/bin/sh
 if [ -z $NULLD_REPEAT_PATH ]
 then
-	NULLD_REPEAT_PATH="/dev/nulld_zero"
+	NULLD_REPEAT_PATH="/dev/nulld_repeat"
 fi
 
 if [ -z $NULLD_HOLE_PATH ]

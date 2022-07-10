@@ -3,7 +3,7 @@ insmod $* || exit 1
 major=$(awk "\$2==\"nulld\" {print \$1}" /proc/devices)
 if [ -z $NULLD_REPEAT_PATH ]
 then
-	NULLD_REPEAT_PATH="/dev/nulld_zero"
+	NULLD_REPEAT_PATH="/dev/nulld_repeat"
 fi
 
 if [ -z $NULLD_HOLE_PATH ]

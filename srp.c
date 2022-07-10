@@ -6,7 +6,7 @@
 #include <sys/ioctl.h>
 #include <stdlib.h>
 
-const char *DPATH = "/dev/nulld_zero";
+const char *DPATH = "/dev/nulld_repeat";
 const char *REPEAT_ENV = "NULLD_REPEAT_PATH";
 
 int load_dev()
@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	if (!strcmp(argv[1], "help")) {
-		puts("srp: Get or set the value repeated by nulld_zero");
+		puts("srp: Get or set the value repeated by nulld_repeat");
 		puts("actions:");
 		printf("get%16cGet's the current repeated value\n", ' ');
 		printf("set%4c<repeat>%4csets the repeated value to repeat\n",
