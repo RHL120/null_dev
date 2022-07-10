@@ -6,6 +6,15 @@
 #include <sys/ioctl.h>
 #include <stdlib.h>
 
+const char *DPATH = "/dev/nulld_zero";
+const char *REPEAT_ENV = "NULLD_REPEAT_PATH";
+
+int load_dev()
+{
+	char *env = getenv(REPEAT_ENV);
+	return env? open(env, 0): open(DPATH, 0);
+}
+
 int main(int argc, char *argv[])
 {
 	int ret = 0;
@@ -13,7 +22,16 @@ int main(int argc, char *argv[])
 		puts("Usage: srp <get | set <repeat>>");
 		return -1;
 	}
-	int dev_fd = open("/dev/nulld_zero", 0);
+	if (!strcmp(argv[1], "help")) {
+		puts("srp: Get or set the value repeated by nulld_zero");
+		puts("actions:");
+		printf("get%16cGet's the current repeated value\n", ' ');
+		printf("set%4c<repeat>%4csets the repeated value to repeat\n",
+				' ', ' ');
+		printf("help%15cprints this message\n", ' ');
+		return 0;
+	}
+	int dev_fd = load_dev();
 	if (dev_fd < 0) {
 		puts("Failed to open device");
 		return -1;
