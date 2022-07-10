@@ -3,123 +3,123 @@
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
 #include <linux/module.h>
+#include "nulld.h"
 
 MODULE_LICENSE("GPL");
 
-int major = -1;
-
+int major = 0;
+int repeat = 0;
+module_param(repeat, int, S_IRUGO);
 module_param(major, int, S_IRUGO);
 
-struct cdev null_cdev;
-struct cdev zero_cdev;
-struct cdev all_cdev;
+struct hole_device {
+	struct cdev cdev;
+};
 
-const unsigned char device_count = 3;
+struct repeat_device {
+	char repeat;
+	struct cdev cdev;
+};
 
-ssize_t null_write(struct file *filp, const char __user *buff, size_t size, loff_t *off)
+struct hole_device hole_dev;
+struct repeat_device repeat_dev;
+
+int repeat_open(struct inode *node, struct file *filp)
 {
-	return size;
+	filp->private_data = container_of(node->i_cdev, struct repeat_device,
+			cdev);
+	return 0;
 }
-
-ssize_t zero_read(struct file *filp, char __user *buff, size_t size, loff_t *off)
+ssize_t repeat_read(struct file *f, char __user *b, size_t size, loff_t *off)
 {
-	for (int i = 0; i < size; i++) {
-		if (put_user('\0', buff+i))
-			return -EFAULT;
+	struct repeat_device *rd = f->private_data;
+	// Store in local variable in case rd->repeat changes.
+	char rp = rd->repeat;
+	for (size_t i = 0; i < size; i++) {
+		if (put_user(rp, b + i))
+			return i;
 	}
 	return size;
 }
 
-struct file_operations null_fops = {
-	.owner = THIS_MODULE,
-	.write = null_write
-};
-
-struct file_operations zero_fops = {
-	.owner = THIS_MODULE,
-	.read = zero_read
-};
-
-struct file_operations all_fops = {
-	.owner = THIS_MODULE,
-	.read = zero_read,
-	.write = null_write
-};
-
-int null_setup_cdev(void)
+long repeat_ioctl(struct file *filp, unsigned int cmd, unsigned long a)
 {
-	dev_t num = MKDEV(major, 0);
-	cdev_init(&null_cdev, &null_fops);
-	null_cdev.owner = THIS_MODULE;
-	return cdev_add(&null_cdev, num, 1);
+	struct repeat_device *rd = filp->private_data;
+	char *arg = (char *) a;
+	switch (cmd) {
+	case NULLD_SET_REPEAT:
+		return get_user(rd->repeat, arg);
+	case NULLD_GET_REPEAT:
+		return put_user(rd->repeat, arg);
+	}
+	return -ENOTTY;
 }
 
-int zero_setup_cdev(void)
+struct file_operations repeat_fops = {
+	.unlocked_ioctl = repeat_ioctl,
+	.open = repeat_open,
+	.read = repeat_read
+
+};
+
+int repeat_setup(struct repeat_device *rd, int major, int minor, char rp)
 {
-	dev_t num = MKDEV(major, 1);
-	cdev_init(&zero_cdev, &zero_fops);
-	zero_cdev.owner = THIS_MODULE;
-	return cdev_add(&zero_cdev, num, 1);
+	rd->repeat = rp;
+	cdev_init(&rd->cdev, &repeat_fops);
+	return cdev_add(&rd->cdev, MKDEV(major, minor), 1);
+
 }
 
-int all_setup_cdev(void)
+ssize_t hole_write(struct file *f, const char __user *b, size_t s, loff_t *o)
 {
-	dev_t num = MKDEV(major, 2);
-	cdev_init(&all_cdev, &all_fops);
-	all_cdev.owner = THIS_MODULE;
-	return cdev_add(&all_cdev, num, 1);
+	return s;
+}
+
+struct file_operations hole_fops = {
+	.write = hole_write
+};
+
+int hole_setup(struct hole_device *hd, int major, int minor)
+{
+	cdev_init(&hd->cdev, &hole_fops);
+	return cdev_add(&hd->cdev, MKDEV(major, minor), 1);
 
 }
 
 int nulld_init(void)
 {
 	int res = 0;
-	dev_t dev;
-	if (major < 0) {
-		res = alloc_chrdev_region(&dev, 0, device_count, "nulld");
-		major = MAJOR(dev);
+	if (major) {
+		res = register_chrdev_region(MKDEV(major, 0), 2, "nulld");
 	} else {
-		dev = MKDEV(major, 0);
-		res = register_chrdev_region(dev, device_count, "nulld");
+		dev_t num;
+		res = alloc_chrdev_region(&num, 0, 2, "nulld");
+		major = MAJOR(num);
 	}
 	if (res < 0) {
-		printk(KERN_ERR "failed to get device number\n");
+		printk(KERN_ERR "Failed to allocate chrdev region\n");
 		goto ret;
 	}
-	printk(KERN_NOTICE "got major: %d", major);
-	if ((res = null_setup_cdev()) < 0) {
-		printk(KERN_ERR "failed to setup null's cdev\n");
-		goto null_cdev_ret;
+	printk(KERN_NOTICE "Got Major number: %d\n", major);
+	if ((res = hole_setup(&hole_dev, major, 0)) < 0) {
+		printk(KERN_ERR "Failed to setup the hole\n");
+		goto hole_fail;
 	}
-	if ((res = zero_setup_cdev()) < 0) {
-		printk(KERN_ERR "failed to setup zero's cdev\n");
-		goto zero_cdev_ret;
+	if ((res = repeat_setup(&repeat_dev, major, 1, repeat)) < 0) {
+		printk(KERN_ERR "Failed to setup repeat\n");
+		goto repeat_fail;
 	}
-	if ((res = all_setup_cdev()) < 0) {
-		printk(KERN_ERR "failed to setup all's cdev\n");
-		goto all_cdev_ret;
-	}
-	printk(KERN_NOTICE "cdevs are allocated\n");
 	goto ret;
-all_cdev_ret:
-	cdev_del(&zero_cdev);
-zero_cdev_ret:
-	cdev_del(&null_cdev);
-null_cdev_ret:
-	unregister_chrdev_region(dev, device_count);
-
-ret:
-	return res;
+repeat_fail: cdev_del(&hole_dev.cdev);
+hole_fail: unregister_chrdev_region(MKDEV(major, 0), 2);
+ret: return res;
 }
 
 void nulld_exit(void)
 {
-	dev_t num = MKDEV(major, 0);
-	printk(KERN_NOTICE "cleaning up\n");
-	cdev_del(&null_cdev);
-	cdev_del(&zero_cdev);
-	cdev_del(&all_cdev);
-	unregister_chrdev_region(num, device_count);
+	cdev_del(&repeat_dev.cdev);
+	cdev_del(&hole_dev.cdev);
+	unregister_chrdev_region(MKDEV(major, 0), 2);
 }
 
 module_init(nulld_init);
