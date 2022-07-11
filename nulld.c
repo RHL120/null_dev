@@ -48,9 +48,9 @@ long repeat_ioctl(struct file *filp, unsigned int cmd, unsigned long a)
 	char *arg = (char *) a;
 	switch (cmd) {
 	case NULLD_SET_REPEAT:
-		return get_user(rd->repeat, arg);
+		return get_user(rd->repeat, arg)? -EFAULT: 0;
 	case NULLD_GET_REPEAT:
-		return put_user(rd->repeat, arg);
+		return put_user(rd->repeat, arg)? -EFAULT: 0;
 	}
 	return -ENOTTY;
 }
