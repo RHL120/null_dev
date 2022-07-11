@@ -37,7 +37,7 @@ ssize_t repeat_read(struct file *f, char __user *b, size_t size, loff_t *off)
 	char rp = rd->repeat;
 	for (size_t i = 0; i < size; i++) {
 		if (put_user(rp, b + i))
-			return i;
+			return -EFAULT;
 	}
 	return size;
 }
