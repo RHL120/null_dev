@@ -86,7 +86,7 @@ int hole_setup(struct hole_device *hd, int major, int minor)
 
 }
 
-int nulld_init(void)
+int __init nulld_init(void)
 {
 	int res = 0;
 	if (major) {
@@ -115,7 +115,7 @@ hole_fail: unregister_chrdev_region(MKDEV(major, 0), 2);
 ret: return res;
 }
 
-void nulld_exit(void)
+void __exit nulld_exit(void)
 {
 	cdev_del(&repeat_dev.cdev);
 	cdev_del(&hole_dev.cdev);
