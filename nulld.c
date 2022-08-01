@@ -56,6 +56,7 @@ long repeat_ioctl(struct file *filp, unsigned int cmd, unsigned long a)
 }
 
 struct file_operations repeat_fops = {
+	.owner = THIS_MODULE,
 	.unlocked_ioctl = repeat_ioctl,
 	.open = repeat_open,
 	.read = repeat_read
@@ -76,6 +77,7 @@ ssize_t hole_write(struct file *f, const char __user *b, size_t s, loff_t *o)
 }
 
 struct file_operations hole_fops = {
+	.owner = THIS_MODULE,
 	.write = hole_write
 };
 
